@@ -2,44 +2,61 @@
 
 English | [Українська](README.uk.md) | [简体中文](README.zh-CN.md)
 
-LinkBot finds permanently redirected Markdown links and proposes fixes in a pull request.
+Check Markdown HTTPS links for permanent redirects and 404s. The CLI, pre-commit hook and reusable action are read-only by default; `--fix` explicitly updates eligible redirects locally. They send HTTPS GET requests but never write to the network.
 
-> **Experimental prototype.** No public GitHub App is registered or hosted, and there is no install button. GitHub API integration and PR creation have not been tested live. Do not use in production.
+## CLI
 
-## How to try it
+Requires Python 3.9+ and pip. Install from a checkout (no runtime dependencies):
 
-1. Register your own [GitHub App](https://docs.github.com/en/apps/creating-github-apps), host the server, and install the app on selected repositories. Grant Contents read/write, Pull requests read/write and Metadata read; subscribe to installation and installation_repositories events.
-2. An installation webhook starts a scan. Run the scheduler separately for weekly scans; it discovers installations through the authenticated GitHub App API on every run.
-3. Review any PR before merging. If `linkbot/permanent-redirects` already exists, the repository is skipped; the app does not update that branch.
-
-**A scan containing only 404s creates no notification or PR.** No PR does not mean all links work.
-
-### Server and scheduler
-
-Install Python dependencies with `pip install -r requirements.txt`. Set `LINKBOT_APP_ID`, `LINKBOT_WEBHOOK_SECRET` and either `LINKBOT_PRIVATE_KEY_FILE` or `LINKBOT_PRIVATE_KEY` in the server environment. Never commit credentials. Run behind a publicly reachable HTTPS endpoint; point the GitHub App webhook to `/webhook`.
-
-```bash
-python3 -m flask --app ghapp.app:app run --host 127.0.0.1 --port 8080
+```sh
+python3 -m pip install .
+linkbot                    # check the current directory
+linkbot docs README.md     # check directories and/or files
+linkbot --fix docs         # edit eligible links; review the diff
 ```
 
-This Flask development server is not a production server. To run the scheduler separately, provide the same app ID and private key:
+Exit codes: **0** no findings (or fixes applied with no 404s), **1** redirects needing fixes in check mode or any observed 404, **2** invalid arguments or file I/O/UTF-8 errors. Network failures, unsupported URLs and other HTTP statuses are skipped, not errors: a clean result does **not** prove links work. Output lists the number of links to update (or updated), file names, and 404 entries. Repeated file names mean multiple links. `--fix` may leave earlier changes in place if a later file errors.
 
-```bash
-python3 -c 'from ghapp.scheduler import run_scheduler; run_scheduler()'
+## pre-commit
+
+Install [pre-commit](https://pre-commit.com/) separately, then add this to `.pre-commit-config.yaml` (the example pins a published commit):
+
+```yaml
+repos:
+  - repo: https://github.com/ruslanlap/linkbot
+    rev: 2f939a265060ea83d9a8f97ea5d6d4fd1b9291c1
+    hooks:
+      - id: linkbot
 ```
 
-The scheduler uses a weekly interval and fetches the full paginated installation list each time; uninstalled accounts disappear from the next discovery. An uninstall during an in-progress scan may still cause API errors. Failed discovery skips that iteration rather than scanning a partial list. Error handling, rate limiting, concurrent scans and live GitHub behavior require further work. Only run one scheduler instance; webhook-triggered scans can overlap it.
+Run `pre-commit install` and `pre-commit run --all-files`. The hook checks passed Markdown files and never edits them or the Git index, including partially staged files. Fix separately using `linkbot --fix` and review and stage changes yourself. Checks make network requests and can be slow/offline-inconclusive.
 
-404-only notifications are not implemented. Issues would require Issues read/write permission and reliable idempotency across concurrent scans and retries; existing branch guards also skip scans. Use the Actions run summary for observed 404s instead.
+## Reusable GitHub Action
 
-## Alternative: GitHub Actions
+Requires a checked-out repository, Python 3 and bash on the runner. This example pins a published commit:
 
-Copy `linkbot.py` and `.github/workflows/linkbot.yml` into your repository. Enable GitHub Actions and allow it to create pull requests in repository settings. Run **Actions → LinkBot → Run workflow**; the workflow also runs weekly. Review the generated PR; the run summary lists observed 404s. This is not a GitHub App installation. The workflow has not been tested against a live repository.
+```yaml
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - id: links
+        uses: ruslanlap/linkbot@2f939a265060ea83d9a8f97ea5d6d4fd1b9291c1
+        with:
+          path: docs
+```
+
+`path` defaults to `.` and is one file or directory. Output `exit-code` is `0`, `1`, or `2`; the step itself fails on 1 or 2. Access it using `${{ steps.links.outputs.exit-code }}` (use `if: always()` or `continue-on-error` for subsequent steps after failure). The action requires no token or write permissions; `contents: read` is for checkout. It does not fix files or create PRs. The bundled `.github/workflows/linkbot.yml` is a separate scheduled/manual workflow for this repository, uses `--fix` and may create a PR with contents and pull-requests write permissions; GitHub settings must permit Actions to create PRs. It is not live-verified. 404-only scans create no PR; inspect the run summary.
 
 ## Scope and safety
 
-Only simple Markdown HTTPS links and same-host 301/308 redirect chains ending in HTTP 200 are eligible for replacement. Images, query strings, code blocks, and some Markdown syntax are skipped. Original anchors are retained but not validated. Redirects do not guarantee equivalent content; review the diff. Public IP addresses are checked before connecting; do not include secrets in URLs. Failed checks and skipped links are not proof that links work.
+Only simple inline Markdown HTTPS links are recognized; images, URLs with queries, code fences, lines containing backticks, and other Markdown forms are skipped. Only same-host 301/308 chains ending in 200 are fixed. Anchors are retained, not validated. Private/non-public addresses and unsafe redirect targets are rejected. HTTP failures and inaccessible files during directory traversal can be missed. Redirects may change content: review all fixes. Avoid secrets in URLs.
 
-## Local development
+The experimental `ghapp/` hosted GitHub App code remains in the repository but is unsupported and is not the recommended installation path.
 
-`python3 linkbot.py .` scans and **modifies** Markdown files in the current directory; review changes before committing. Install test dependencies with `pip install pytest pytest-subtests`, then run `python3 -m pytest -q`.
+## Development
+
+For the full legacy and CLI suite, install `requirements.txt`, `pytest`, `pytest-subtests`, and `pyyaml`, then run `python3 -m pytest -q`.
