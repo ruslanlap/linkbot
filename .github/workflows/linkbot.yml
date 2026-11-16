@@ -19,6 +19,7 @@ jobs:
         uses: ruslanlap/linkbot@v0.2.0
         continue-on-error: true
         with:
+          path: fixtures
           fix: 'true'
       - name: Refuse scanner errors
         id: gate
