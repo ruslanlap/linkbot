@@ -13,7 +13,7 @@
 
 [![PowerToys](https://img.shields.io/badge/PowerToys-v0.75+-8BE9FD?style=flat-square&labelColor=282A36)](https://github.com/microsoft/PowerToys)
 [![.NET](https://img.shields.io/badge/.NET-9.0-FF79C6?style=flat-square&labelColor=282A36)](https://dotnet.microsoft.com)
-[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-8BE9FD?style=flat-square&labelColor=282A36)](https://www.microsoft.com/windows)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-8BE9FD?style=flat-square&labelColor=282A36)](https://www.microsoft.com/en-us/windows/)
 [![Architecture](https://img.shields.io/badge/Arch-x64%20%7C%20ARM64-FFB86C?style=flat-square&labelColor=282A36)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases)
 [![Awesome](https://awesome.re/mentioned-badge.svg)](https://github.com/hlaueriksson/awesome-powertoys-run-plugins)
 
@@ -32,13 +32,13 @@ winget install ruslanlap.PowerToysRun-VideoDownloader
 
 #### Manual Download
 
-[![Download for x64](https://img.shields.io/badge/Download-x64%20-50FA7B?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-Setup-1.3.0-x64.exe)
-[![Download for ARM64](https://img.shields.io/badge/Download-ARM64%20-50FA7B?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-Setup-1.3.0-arm64.exe)
+[![Download for x64](https://img.shields.io/badge/Download-x64%20-50FA7B?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-Setup-1.4.1-x64.exe)
+[![Download for ARM64](https://img.shields.io/badge/Download-ARM64%20-50FA7B?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-Setup-1.4.1-arm64.exe)
 
 Or grab the ZIP archives:
 
-[![Download ZIP x64](https://img.shields.io/badge/ZIP-x64%20-6272A4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-1.3.0-x64.zip)
-[![Download ZIP ARM64](https://img.shields.io/badge/ZIP-ARM64%20-6272A4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-1.3.0-ARM64.zip)
+[![Download ZIP x64](https://img.shields.io/badge/ZIP-x64%20-6272A4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-1.4.1-x64.zip)
+[![Download ZIP ARM64](https://img.shields.io/badge/ZIP-ARM64%20-6272A4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-1.4.1-ARM64.zip)
 
 [View All Releases](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases)
 
@@ -86,8 +86,8 @@ That's it — winget handles everything automatically.
 ### Manual Install (ZIP)
 
 1. **Download** the latest release:
-   - [x64 Release (ZIP)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-1.3.0-x64.zip)
-   - [ARM64 Release (ZIP)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-1.3.0-ARM64.zip)
+   - [x64 Release (ZIP)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-1.4.1-x64.zip)
+   - [ARM64 Release (ZIP)](https://github.com/ruslanlap/PowerToysRun-VideoDownloader/releases/latest/download/VideoDownloader-1.4.1-ARM64.zip)
 
 2. **Extract** to:
 
