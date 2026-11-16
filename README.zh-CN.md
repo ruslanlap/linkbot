@@ -19,12 +19,12 @@ linkbot --fix docs
 
 ## pre-commit
 
-先安装 [pre-commit](https://pre-commit.com/)，然后添加 `.pre-commit-config.yaml`，此示例固定到已发布的提交：
+先安装 [pre-commit](https://pre-commit.com/)，然后添加 `.pre-commit-config.yaml`，此示例固定到已发布的版本标签：
 
 ```yaml
 repos:
   - repo: https://github.com/ruslanlap/linkbot
-    rev: 2f939a265060ea83d9a8f97ea5d6d4fd1b9291c1
+    rev: v0.1.0
     hooks:
       - id: linkbot
 ```
@@ -33,7 +33,7 @@ repos:
 
 ## GitHub Action
 
-需要 checkout、Python 3 和 bash；此示例固定到已发布的提交：
+需要 checkout、Python 3 和 bash；此示例固定到已发布的版本标签：
 
 ```yaml
 jobs:
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: links
-        uses: ruslanlap/linkbot@2f939a265060ea83d9a8f97ea5d6d4fd1b9291c1
+        uses: ruslanlap/linkbot@v0.1.0
         with:
           path: docs
 ```

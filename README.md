@@ -19,12 +19,12 @@ Exit codes: **0** no findings (or fixes applied with no 404s), **1** redirects n
 
 ## pre-commit
 
-Install [pre-commit](https://pre-commit.com/) separately, then add this to `.pre-commit-config.yaml` (the example pins a published commit):
+Install [pre-commit](https://pre-commit.com/) separately, then add this to `.pre-commit-config.yaml` (the example pins a published version tag):
 
 ```yaml
 repos:
   - repo: https://github.com/ruslanlap/linkbot
-    rev: 2f939a265060ea83d9a8f97ea5d6d4fd1b9291c1
+    rev: v0.1.0
     hooks:
       - id: linkbot
 ```
@@ -33,7 +33,7 @@ Run `pre-commit install` and `pre-commit run --all-files`. The hook checks passe
 
 ## Reusable GitHub Action
 
-Requires a checked-out repository, Python 3 and bash on the runner. This example pins a published commit:
+Requires a checked-out repository, Python 3 and bash on the runner. This example pins a published version tag:
 
 ```yaml
 jobs:
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: links
-        uses: ruslanlap/linkbot@2f939a265060ea83d9a8f97ea5d6d4fd1b9291c1
+        uses: ruslanlap/linkbot@v0.1.0
         with:
           path: docs
 ```

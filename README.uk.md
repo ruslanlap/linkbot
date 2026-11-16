@@ -19,12 +19,12 @@ linkbot --fix docs
 
 ## pre-commit
 
-Встановіть [pre-commit](https://pre-commit.com/), додайте `.pre-commit-config.yaml`, приклад закріплено на опублікованому коміті:
+Встановіть [pre-commit](https://pre-commit.com/), додайте `.pre-commit-config.yaml`, приклад закріплено на опублікованій версії:
 
 ```yaml
 repos:
   - repo: https://github.com/ruslanlap/linkbot
-    rev: 2f939a265060ea83d9a8f97ea5d6d4fd1b9291c1
+    rev: v0.1.0
     hooks:
       - id: linkbot
 ```
@@ -33,7 +33,7 @@ repos:
 
 ## GitHub Action
 
-Потрібні checkout, Python 3 і bash. Приклад закріплено на опублікованому коміті:
+Потрібні checkout, Python 3 і bash. Приклад закріплено на опублікованій версії:
 
 ```yaml
 jobs:
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: links
-        uses: ruslanlap/linkbot@2f939a265060ea83d9a8f97ea5d6d4fd1b9291c1
+        uses: ruslanlap/linkbot@v0.1.0
         with:
           path: docs
 ```
