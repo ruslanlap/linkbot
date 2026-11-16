@@ -1,0 +1,24 @@
+name: LinkBot
+description: Check Markdown links for permanent redirects and 404s
+inputs:
+  path:
+    description: File or directory to scan
+    default: '.'
+    required: false
+outputs:
+  exit-code:
+    description: 'Scanner exit code: 0 clean, 1 findings, 2 error'
+    value: ${{ steps.scan.outputs.exit-code }}
+runs:
+  using: composite
+  steps:
+    - id: scan
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+      run: |
+        set +e
+        python3 "$GITHUB_ACTION_PATH/linkbot.py" "$INPUT_PATH"
+        status=$?
+        echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+        exit "$status"

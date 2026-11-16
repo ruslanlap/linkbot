@@ -1,0 +1,6 @@
+- id: linkbot
+  name: Check Markdown links with LinkBot
+  entry: linkbot
+  language: python
+  files: \.md$
+  types: [file]

@@ -14,8 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check links and report 404s
-        run: python3 linkbot.py . | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Fix redirects and report 404s
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 linkbot.py --fix . | tee -a "$GITHUB_STEP_SUMMARY" || { status=$?; [ "$status" -eq 1 ]; }
       - name: Open or update grouped redirect PR
         uses: peter-evans/create-pull-request@v7
         with:

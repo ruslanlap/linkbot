@@ -74,21 +74,28 @@ def resolve(url):
     return None, False
 
 
-def scan(root):
+def scan(root, fix=True, strict=False):
+    root = Path(root)
+    if strict and not root.exists():
+        raise FileNotFoundError(root)
+    paths = [root] if root.is_file() else sorted(root.rglob('*.md'))
+    base = root.parent if root.is_file() else root
     changes, missing = [], []
-    for path in sorted(root.rglob('*.md')):
-        if path.is_symlink() or '.git' in path.parts:
+    for path in paths:
+        if path.is_symlink() or '.git' in path.parts or path.suffix.lower() != '.md':
             continue
         try:
-            text = path.read_text(encoding='utf-8')
+            text = path.read_bytes().decode('utf-8')
         except (OSError, UnicodeError):
+            if strict:
+                raise
             continue
         def replace(match):
             token = match.group(0)
             start = token.index('](https://') + 2
             url = token[start:-1]
             replacement, is_missing = resolve(url)
-            name = path.relative_to(root).as_posix()
+            name = path.relative_to(base).as_posix()
             if is_missing:
                 missing.append(f'{name}: {url}')
             if replacement and replacement != url:
@@ -111,21 +118,34 @@ def scan(root):
             else:
                 lines.append(LINK.sub(replace, line))
         updated = ''.join(lines)
-        if updated != text:
-            path.write_text(updated, encoding='utf-8')
+        if updated != text and fix:
+            path.write_bytes(updated.encode('utf-8'))
     return changes, missing
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('root', nargs='?', default='.')
-    args = parser.parse_args()
-    changes, missing = scan(Path(args.root))
-    print(f'Updated {len(changes)} links.')
+def main(argv=None):
+    parser = argparse.ArgumentParser(description='Check Markdown HTTPS links; use --fix to update permanent redirects.')
+    parser.add_argument('--fix', action='store_true', help='write eligible redirect replacements')
+    parser.add_argument('paths', nargs='*', default=['.'], help='Markdown files or directories (default: current directory)')
+    args = parser.parse_args(argv)
+    changes, missing = [], []
+    try:
+        for path in args.paths:
+            found, broken = scan(Path(path), fix=args.fix, strict=True)
+            changes.extend(found)
+            missing.extend(broken)
+    except (OSError, UnicodeError) as exc:
+        import sys
+        print(f'linkbot: {exc!s}', file=sys.stderr)
+        return 2
+    print(f'{"Updated" if args.fix else "Would update"} {len(changes)} links.')
+    for item in changes:
+        print(f'  {item!r}')
     print('404 links:')
     for item in missing:
         print(repr(item))
+    return 1 if missing or (changes and not args.fix) else 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())
