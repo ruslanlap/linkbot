@@ -1,32 +1,21 @@
 """Scheduled scan driver.
 
 In production, run this module (or call ``run_scheduler``) as a long-lived
-process alongside the webhook server.  It periodically enumerates all known
-installations and triggers scans.
-
-For real deployments you'd store installation IDs in a database.
-This minimal version accepts them via environment variable.
+process alongside the webhook server. It discovers installations from GitHub
+on each iteration and triggers scans.
 """
 
 import logging
-import os
 import time
 
-from . import scanner
+from . import scanner, github_api
 
 logger = logging.getLogger("linkbot.scheduler")
 
 
 def get_installation_ids() -> list[int]:
-    """Return the list of installation IDs to scan.
-
-    In production, this would query a database populated by
-    installation webhook events.  Here we read from env for simplicity.
-    """
-    raw = os.environ.get("LINKBOT_INSTALLATION_IDS", "")
-    if not raw.strip():
-        return []
-    return [int(x.strip()) for x in raw.split(",") if x.strip()]
+    """Fetch a complete fresh installation list before starting any scans."""
+    return github_api.list_installation_ids()
 
 
 def run_once() -> list[dict]:

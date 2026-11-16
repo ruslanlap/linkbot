@@ -9,7 +9,7 @@ LinkBot finds permanently redirected Markdown links and proposes fixes in a pull
 ## How to try it
 
 1. Register your own [GitHub App](https://docs.github.com/en/apps/creating-github-apps), host the server, and install the app on selected repositories. Grant Contents read/write, Pull requests read/write and Metadata read; subscribe to installation and installation_repositories events.
-2. An installation webhook starts a scan. For weekly scans, run the scheduler separately and manually set `LINKBOT_INSTALLATION_IDS`; installations are not added automatically.
+2. An installation webhook starts a scan. Run the scheduler separately for weekly scans; it discovers installations through the authenticated GitHub App API on every run.
 3. Review any PR before merging. If `linkbot/permanent-redirects` already exists, the repository is skipped; the app does not update that branch.
 
 **A scan containing only 404s creates no notification or PR.** No PR does not mean all links work.
@@ -22,13 +22,15 @@ Install Python dependencies with `pip install -r requirements.txt`. Set `LINKBOT
 python3 -m flask --app ghapp.app:app run --host 127.0.0.1 --port 8080
 ```
 
-This Flask development server is not a production server. To run the scheduler separately, provide the same app credentials and a comma-separated list of installation IDs:
+This Flask development server is not a production server. To run the scheduler separately, provide the same app ID and private key:
 
 ```bash
-LINKBOT_INSTALLATION_IDS=123,456 python3 -c 'from ghapp.scheduler import run_scheduler; run_scheduler()'
+python3 -c 'from ghapp.scheduler import run_scheduler; run_scheduler()'
 ```
 
-The scheduler uses a weekly interval and does not persist installations. Error handling, rate limiting, concurrent scans, installation lifecycle and live GitHub behavior require further work.
+The scheduler uses a weekly interval and fetches the full paginated installation list each time; uninstalled accounts disappear from the next discovery. An uninstall during an in-progress scan may still cause API errors. Failed discovery skips that iteration rather than scanning a partial list. Error handling, rate limiting, concurrent scans and live GitHub behavior require further work. Only run one scheduler instance; webhook-triggered scans can overlap it.
+
+404-only notifications are not implemented. Issues would require Issues read/write permission and reliable idempotency across concurrent scans and retries; existing branch guards also skip scans. Use the Actions run summary for observed 404s instead.
 
 ## Alternative: GitHub Actions
 

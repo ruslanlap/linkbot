@@ -31,6 +31,27 @@ def _headers(installation_id: int) -> dict:
     }
 
 
+def list_installation_ids() -> list[int]:
+    """List app installations, failing the whole discovery if any page fails."""
+    ids = []
+    page = 1
+    while True:
+        resp = requests.get(
+            f"{API}/app/installations",
+            headers={"Authorization": f"Bearer {auth._app_jwt()}",
+                     "Accept": "application/vnd.github+json"},
+            params={"per_page": 100, "page": page}, timeout=30,
+        )
+        resp.raise_for_status()
+        installations = resp.json()
+        if not isinstance(installations, list):
+            raise ValueError("Invalid installations response")
+        ids.extend(item["id"] for item in installations)
+        if len(installations) < 100:
+            return ids
+        page += 1
+
+
 def list_repos(installation_id: int) -> list[dict]:
     """List repositories accessible to this installation."""
     hdrs = _headers(installation_id)

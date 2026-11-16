@@ -498,25 +498,39 @@ class TestInstallationLifecycle(unittest.TestCase):
 class TestScheduler(unittest.TestCase):
     """Test the scheduled scan driver."""
 
-    def test_get_installation_ids_from_env(self):
+    @patch("ghapp.auth._app_jwt", return_value="app-jwt")
+    @patch("ghapp.github_api.requests.get")
+    def test_discovery_paginates_with_app_auth(self, get, jwt):
         from ghapp.scheduler import get_installation_ids
-        with patch.dict(os.environ, {"LINKBOT_INSTALLATION_IDS": "1,2,3"}):
-            ids = get_installation_ids()
-        self.assertEqual(ids, [1, 2, 3])
+        first, second = MagicMock(), MagicMock()
+        first.json.return_value = [{"id": i} for i in range(1, 101)]
+        second.json.return_value = [{"id": 101}]
+        get.side_effect = [first, second]
+        self.assertEqual(get_installation_ids(), list(range(1, 102)))
+        self.assertEqual(get.call_args_list[0].kwargs["headers"]["Authorization"], "Bearer app-jwt")
+        self.assertEqual(get.call_args_list[1].kwargs["params"], {"per_page": 100, "page": 2})
 
-    def test_get_installation_ids_empty(self):
-        from ghapp.scheduler import get_installation_ids
-        with patch.dict(os.environ, {"LINKBOT_INSTALLATION_IDS": ""}):
-            ids = get_installation_ids()
-        self.assertEqual(ids, [])
+    @patch("ghapp.github_api.requests.get")
+    @patch("ghapp.auth._app_jwt", return_value="app-jwt")
+    @patch("ghapp.scanner.scan_installation")
+    def test_failed_pagination_does_not_scan_partial_results(self, scan, jwt, get):
+        from ghapp.scheduler import run_once
+        first, second = MagicMock(), MagicMock()
+        first.json.return_value = [{"id": i} for i in range(100)]
+        second.raise_for_status.side_effect = RuntimeError("API failed")
+        get.side_effect = [first, second]
+        with self.assertRaises(RuntimeError):
+            run_once()
+        scan.assert_not_called()
 
     @patch("ghapp.scanner.scan_installation", return_value=[{"repo": "a/b"}])
-    def test_run_once(self, mock_scan):
+    @patch("ghapp.scheduler.get_installation_ids", side_effect=[[100, 200], [200]])
+    def test_uninstalled_id_is_not_scanned_on_next_iteration(self, ids, scan):
         from ghapp.scheduler import run_once
-        with patch.dict(os.environ, {"LINKBOT_INSTALLATION_IDS": "100"}):
-            results = run_once()
-        self.assertEqual(len(results), 1)
-        mock_scan.assert_called_once_with(100)
+        run_once()
+        scan.reset_mock()
+        run_once()
+        scan.assert_called_once_with(200)
 
 
 class TestPrivateKeyNeverLeaked(unittest.TestCase):

@@ -9,7 +9,7 @@ LinkBot 查找 Markdown 中的永久重定向链接，并通过 pull request 提
 ## 使用流程
 
 1. 如需试用，请自行注册 GitHub App、部署服务器，并授予所选仓库的访问权限。配置步骤见 [English README](README.md)。
-2. 安装 webhook 会触发扫描。若要每周扫描，需要单独启动调度器并手动配置 `LINKBOT_INSTALLATION_IDS`。
+2. 安装 webhook 会触发扫描。若要每周扫描，需要单独启动调度器；调度器通过 GitHub API 获取安装列表。
 3. 找到重定向后，请在合并前审查 PR。如果 `linkbot/permanent-redirects` 分支已存在，仓库会被跳过；机器人不会更新该分支。
 
 **仅有 404 时不会创建通知或 PR。** 没有 PR 不代表所有链接都正常。
