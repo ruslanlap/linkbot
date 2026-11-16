@@ -1,0 +1,27 @@
+name: LinkBot
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: linkbot
+  cancel-in-progress: false
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check links and report 404s
+        run: python3 linkbot.py . | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Open or update grouped redirect PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: linkbot/permanent-redirects
+          delete-branch: true
+          title: 'docs: update permanently redirected links'
+          commit-message: 'docs: update permanently redirected links'
+          body: 'LinkBot found same-host permanent redirects ending in HTTP 200. Review destination and anchor validity before merging. See the workflow run for 404s.'
+          add-paths: '**/*.md'
