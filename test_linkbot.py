@@ -20,6 +20,27 @@ class LinkBotTests(unittest.TestCase):
             self.assertEqual(len(changes), 1)
             self.assertEqual(missing, ['a.md: https://example.com/missing'])
 
+    def test_latest_github_asset_version_repair(self):
+        old = 'https://github.com/owner/repo/releases/latest/download/tool-1.3.0-x64.zip'
+        new = old.replace('1.3.0', '1.4.0')
+        release = {'tag_name': 'v1.4.0', 'draft': False, 'prerelease': False,
+                   'assets': [{'name': 'tool-1.4.0-x64.zip'}]}
+        def fetch(url):
+            return (302, '/owner/repo/releases/download/v1.4.0/tool-1.3.0-x64.zip') if url == old else (404, None)
+        with patch('linkbot.fetch', side_effect=fetch), patch('linkbot.latest_release', return_value=release, create=True):
+            self.assertEqual(linkbot.resolve(old), (new, False))
+        for bad in [dict(release, prerelease=True), dict(release, draft=True),
+                    dict(release, assets=[]), dict(release, assets=release['assets'] * 2),
+                    dict(release, tag_name='v1.4.0-rc1')]:
+            with self.subTest(bad=bad), patch('linkbot.fetch', side_effect=fetch), patch('linkbot.latest_release', return_value=bad, create=True):
+                self.assertEqual(linkbot.resolve(old), (None, True))
+
+        ambiguous = old.replace('tool-1.3.0-x64.zip', 'tool-1.3.0-2.0.0.zip')
+        with patch('linkbot.fetch', return_value=(404, None)), patch('linkbot.latest_release', create=True) as api:
+            self.assertEqual(linkbot.resolve(ambiguous), (None, True))
+            self.assertEqual(linkbot.resolve('https://example.com/missing'), (None, True))
+            api.assert_not_called()
+
     def test_redirects_fail_closed(self):
         for target in ['http://example.com/new', 'https://evil.com/new', '/new#other', 'https://user:pass@example.com/new', '/new?token=secret']:
             with self.subTest(target=target), patch('linkbot.fetch', return_value=(301, target)):

@@ -49,11 +49,17 @@ jobs:
           path: docs
 ```
 
-`path` defaults to `.` and is one file or directory. Output `exit-code` is `0`, `1`, or `2`; the step itself fails on 1 or 2. Access it using `${{ steps.links.outputs.exit-code }}` (use `if: always()` or `continue-on-error` for subsequent steps after failure). The action requires no token or write permissions; `contents: read` is for checkout. It does not fix files or create PRs. The bundled `.github/workflows/linkbot.yml` is a separate scheduled/manual workflow for this repository, uses `--fix` and may create a PR with contents and pull-requests write permissions; GitHub settings must permit Actions to create PRs. It is not live-verified. 404-only scans create no PR; inspect the run summary.
+`path` defaults to `.` and is one file or directory. The new `fix` input accepts only `'true'` or `'false'` (default); `'true'` applies eligible fixes. Output `exit-code` is `0`, `1`, or `2`; the step itself fails on 1 or 2. Access it using `${{ steps.links.outputs.exit-code }}` (use `if: always()` or `continue-on-error` after failure). The action needs no token or write permissions and does not create PRs.
+
+### Scheduled fix PRs
+
+Copy [`.github/workflows/linkbot.yml`](.github/workflows/linkbot.yml) into the same path in your repository. It runs weekly or manually, invokes the published action with `fix: 'true'`, and groups changes in one PR via `peter-evans/create-pull-request`. It accepts exit 1 so fixes can be proposed alongside unresolved 404s, but blocks PR creation on exit 2 or missing status. A 404-only scan creates no PR; inspect the action log. Review every fix before merging. The workflow grants only contents and pull-requests write permissions; repository settings must also allow GitHub Actions to create PRs.
+
+The workflow references `@main`: it requires these changes to be merged and published first. Pin an immutable commit or a release containing `fix` after publication; the `v0.1.0` check-only example above does not provide it. This workflow has not been tested with a live PR.
 
 ## Scope and safety
 
-Only simple inline Markdown HTTPS links are recognized; images, URLs with queries, code fences, lines containing backticks, and other Markdown forms are skipped. Only same-host 301/308 chains ending in 200 are fixed. Anchors are retained, not validated. Private/non-public addresses and unsafe redirect targets are rejected. HTTP failures and inaccessible files during directory traversal can be missed. Redirects may change content: review all fixes. Avoid secrets in URLs.
+Simple inline Markdown HTTPS links, linked image badges, and single-line HTML anchors with quoted HTTPS hrefs are recognized; image sources, URLs with queries, code fences, lines containing backticks or backslashes, and other forms are skipped. Same-host 301/308 chains ending in 200 are fixed. A confirmed 404 GitHub `releases/latest/download` asset can also be updated when the public, unauthenticated latest-release API identifies exactly one asset whose name differs only by its stable release version; unavailable, ambiguous, draft or prerelease results are not fixed. API rate limits may prevent fixes. Anchors are retained, not validated. Private/non-public addresses and unsafe redirect targets are rejected. HTTP failures and inaccessible files during directory traversal can be missed. Redirects may change content: review all fixes. Avoid secrets in URLs.
 
 The experimental `ghapp/` hosted GitHub App code remains in the repository but is unsupported and is not the recommended installation path.
 

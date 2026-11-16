@@ -27,6 +27,45 @@ class CLITests(unittest.TestCase):
             with patch('linkbot.fetch', return_value=(404, None)), contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(linkbot.main([str(p)]), 1)
 
+    def test_badge_and_anchor_check_fix_conservatively(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'odd name.md'
+            original = ('[![badge](https://img.example/old)](https://example.com/old)\n'
+                        '<a class="button" href="https://example.com/missing"><img src="https://img.example/old"></a>\n'
+                        "<a href='https://example.com/old'>download</a>\n"
+                        '![image](https://example.com/old)\n'
+                        '\\[escaped](https://example.com/old)\n'
+                        '`[code](https://example.com/old)`\n'
+                        '~~~md\n<a href="https://example.com/old">code</a>\n~~~\n')
+            p.write_text(original)
+            def fetch(url):
+                return {'https://example.com/old': (301, '/new'),
+                        'https://example.com/new': (200, None),
+                        'https://example.com/missing': (404, None)}[url]
+            out = io.StringIO()
+            with patch('linkbot.fetch', side_effect=fetch), contextlib.redirect_stdout(out):
+                self.assertEqual(linkbot.main([str(p)]), 1)
+                self.assertEqual(p.read_text(), original)
+                self.assertEqual(linkbot.main(['--fix', str(p)]), 1)
+            self.assertIn('odd name.md: https://example.com/missing', out.getvalue())
+            self.assertEqual(p.read_text(), original.replace('](https://example.com/old)\n', '](https://example.com/new)\n', 1).replace("href='https://example.com/old'", "href='https://example.com/new'"))
+
+    def test_latest_asset_check_and_fix(self):
+        url = 'https://github.com/owner/repo/releases/latest/download/tool-1.3.0.zip'
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'readme.md'
+            original = f'[![download](https://img.example/badge)]({url})\n'
+            p.write_text(original)
+            def fetch(target):
+                return (302, '/owner/repo/releases/download/v1.4.0/tool-1.3.0.zip') if target == url else (404, None)
+            release = {'tag_name': 'v1.4.0', 'draft': False, 'prerelease': False,
+                       'assets': [{'name': 'tool-1.4.0.zip'}]}
+            with patch('linkbot.fetch', side_effect=fetch), patch('linkbot.latest_release', return_value=release), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(linkbot.main([str(p)]), 1)
+                self.assertEqual(p.read_text(), original)
+                self.assertEqual(linkbot.main(['--fix', str(p)]), 0)
+            self.assertEqual(p.read_text(), original.replace('tool-1.3.0.zip', 'tool-1.4.0.zip'))
+
     def test_invalid_path_is_error(self):
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(linkbot.main(['/definitely/not/linkbot/path']), 2)

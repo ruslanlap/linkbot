@@ -14,11 +14,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fix redirects and report 404s
+      - name: Fix links and report 404s
+        id: scan
+        uses: ruslanlap/linkbot@main
+        continue-on-error: true
+        with:
+          fix: 'true'
+      - name: Refuse scanner errors
+        id: gate
         shell: bash
+        env:
+          SCAN_EXIT_CODE: ${{ steps.scan.outputs.exit-code }}
         run: |
-          set -o pipefail
-          python3 linkbot.py --fix . | tee -a "$GITHUB_STEP_SUMMARY" || { status=$?; [ "$status" -eq 1 ]; }
+          case "$SCAN_EXIT_CODE" in
+            0|1) ;;
+            *) echo "LinkBot failed: ${SCAN_EXIT_CODE:-no exit code}" >&2; exit 1 ;;
+          esac
       - name: Open or update grouped redirect PR
         uses: peter-evans/create-pull-request@v7
         with:
@@ -26,5 +37,5 @@ jobs:
           delete-branch: true
           title: 'docs: update permanently redirected links'
           commit-message: 'docs: update permanently redirected links'
-          body: 'LinkBot found same-host permanent redirects ending in HTTP 200. Review destination and anchor validity before merging. See the workflow run for 404s.'
+          body: 'LinkBot updated eligible links. Review all destinations and anchors before merging. See the workflow run for unresolved 404s.'
           add-paths: '**/*.md'

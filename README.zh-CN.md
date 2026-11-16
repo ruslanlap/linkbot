@@ -49,11 +49,17 @@ jobs:
           path: docs
 ```
 
-`path` 为单个文件或目录，默认 `.`。输出 `exit-code` 为 0、1 或 2；1 和 2 会使步骤失败。通过 `${{ steps.links.outputs.exit-code }}` 读取；失败后使用 `if: always()` 或 `continue-on-error`。action 不需要令牌或写权限，`contents: read` 用于 checkout。action 不修复文件或创建 PR。本仓库另有定时/手动 `.github/workflows/linkbot.yml`，执行 `--fix` 并可能创建 PR，需要 contents 和 pull-requests 写权限及 GitHub 设置允许创建 PR；尚未在真实 GitHub 验证。只有 404 不会创建 PR，请查看运行摘要。
+`path` 为单个文件或目录，默认 `.`。新输入 `fix` 仅接受 `'true'` 或 `'false'`（默认）；`'true'` 应用符合条件的修复。输出 `exit-code` 为 0、1 或 2；1 和 2 会使步骤失败。通过 `${{ steps.links.outputs.exit-code }}` 读取；失败后使用 `if: always()` 或 `continue-on-error`。action 不需要令牌或写权限，也不创建 PR。
+
+### 定时修复 PR
+
+将 [`.github/workflows/linkbot.yml`](.github/workflows/linkbot.yml) 复制到自己仓库的相同路径。它每周或手动运行，使用 `fix: 'true'` 调用已发布的 action，并通过 `peter-evans/create-pull-request` 将更改合并到一个 PR。退出码 1 允许在存在未修复 404 时提交修复；退出码 2 或缺少状态会阻止 PR。只有 404 时不会创建 PR；请查看 action 日志。合并前请审查所有修复。工作流仅授予 contents 和 pull-requests 写权限；仓库设置还必须允许 Actions 创建 PR。
+
+工作流引用 `@main`，因此必须先合并并发布这些更改。发布后请固定到包含 `fix` 的不可变提交或版本；上面的 `v0.1.0` 示例仅用于检查。尚未使用真实 PR 验证。
 
 ## 限制
 
-仅支持简单的内联 HTTPS 链接；图片、带查询参数的 URL、代码块、含反引号的行和其他 Markdown 形式会被跳过。只修复同主机、最终返回 200 的 301/308。锚点保留但不验证；私有地址会被拒绝。部分 HTTP/网络错误和不可访问的目录可能被忽略。请审查所有修改，不要在 URL 中放入密钥。
+支持简单内联 Markdown HTTPS 链接、嵌套图片徽章链接，以及单行、带引号 href 的 HTML 锚点；跳过图片源、含查询参数的 URL、代码块及包含反引号或反斜杠的行。修复同主机、最终返回 200 的 301/308。对于确认 404 的 GitHub `releases/latest/download` 资源，通过无需令牌的公开 API 查询最新稳定版本，仅当资源名只有版本不同且匹配唯一时才修复；草稿、预发布、缺失或不明确的结果不会修复，API 限流可能阻止修复。锚点保留但不验证；私有地址会被拒绝。部分 HTTP/网络错误和不可访问的目录可能被忽略。请审查所有修改，不要在 URL 中放入密钥。
 
 实验性的托管 GitHub App 代码仍保留在 `ghapp/`，但不受支持。
 

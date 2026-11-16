@@ -5,6 +5,10 @@ inputs:
     description: File or directory to scan
     default: '.'
     required: false
+  fix:
+    description: Apply eligible fixes (true or false)
+    default: 'false'
+    required: false
 outputs:
   exit-code:
     description: 'Scanner exit code: 0 clean, 1 findings, 2 error'
@@ -16,9 +20,15 @@ runs:
       shell: bash
       env:
         INPUT_PATH: ${{ inputs.path }}
+        INPUT_FIX: ${{ inputs.fix }}
       run: |
+        case "${INPUT_FIX-false}" in
+          true) args=(--fix) ;;
+          false) args=() ;;
+          *) echo 'fix must be true or false' >&2; echo 'exit-code=2' >> "$GITHUB_OUTPUT"; exit 2 ;;
+        esac
         set +e
-        python3 "$GITHUB_ACTION_PATH/linkbot.py" "$INPUT_PATH"
+        python3 "$GITHUB_ACTION_PATH/linkbot.py" "${args[@]}" -- "$INPUT_PATH"
         status=$?
         echo "exit-code=$status" >> "$GITHUB_OUTPUT"
         exit "$status"

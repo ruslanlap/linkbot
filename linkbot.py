@@ -3,14 +3,19 @@
 import argparse
 import http.client
 import ipaddress
+import json
 import re
 import socket
 import ssl
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-# ponytail: handles simple inline links only; use a Markdown parser for full syntax.
-LINK = re.compile(r'(?<!!)\[[^\]\n]*\]\(https://[^\s()<>]+\)')
+# ponytail: simple single-line syntax only; use a parser for full Markdown/HTML.
+LINK = re.compile(
+    r'''(?<!!)\[(?:[^\[\]\n]*|!\[[^\[\]\n]*\]\([^\s()<>]*\))\]\((?P<md>https://[^\s()<>"'\\]+)\)'''
+    r'''|<a\s+(?:[\w:-]+\s*=\s*(?:"[^"<>]*"|'[^'<>]*')\s+)*href\s*=\s*(?P<quote>["'])(?P<html>https://[^\s<>"'\\&]+)(?P=quote)(?=\s|/?>)''',
+    re.IGNORECASE)
+
 
 
 def parts(url):
@@ -22,7 +27,7 @@ def parts(url):
     return p
 
 
-def fetch(url):
+def request(url, json_body=False):
     p = parts(url)
     addresses = socket.getaddrinfo(p.hostname, 443, type=socket.SOCK_STREAM)
     if not addresses or any(not ipaddress.ip_address(a[4][0]).is_global for a in addresses):
@@ -40,9 +45,46 @@ def fetch(url):
     try:
         conn.request('GET', urlunsplit(('', '', p.path or '/', '', '')), headers={'User-Agent': 'LinkBot/1.0', 'Accept': '*/*'})
         response = conn.getresponse()
+        if json_body:
+            if response.status != 200:
+                return None
+            body = response.read(2_000_001)
+            if len(body) > 2_000_000:
+                return None
+            return json.loads(body)
         return response.status, response.getheader('Location')
     finally:
         conn.close()
+
+
+def fetch(url):
+    return request(url)
+
+
+def latest_release(owner, repo):
+    return request(f'https://api.github.com/repos/{owner}/{repo}/releases/latest', json_body=True)
+
+
+def asset_replacement(url, match):
+    owner, repo, filename = match.groups()
+    versions = list(re.finditer(r'(?<![\d.])\d+\.\d+\.\d+(?!\d|\.\d)', filename))
+    if len(versions) != 1:
+        return None
+    release = latest_release(owner, repo)
+    if not isinstance(release, dict) or release.get('draft') is not False or release.get('prerelease') is not False:
+        return None
+    tag = release.get('tag_name')
+    if not isinstance(tag, str) or not re.fullmatch(r'v?\d+\.\d+\.\d+', tag):
+        return None
+    version = tag.removeprefix('v')
+    old = versions[0]
+    if version == old.group():
+        return None
+    candidate = filename[:old.start()] + version + filename[old.end():]
+    assets = release.get('assets')
+    if not isinstance(assets, list) or sum(isinstance(a, dict) and a.get('name') == candidate for a in assets) != 1:
+        return None
+    return url[:url.rfind('/') + 1] + candidate
 
 
 def resolve(url):
@@ -50,6 +92,8 @@ def resolve(url):
     try:
         original = parts(url)
         current = urlunsplit((original.scheme, original.netloc, original.path, '', ''))
+        asset = (re.fullmatch(r'/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/releases/latest/download/([A-Za-z0-9_.-]+)', original.path)
+                 if original.netloc.lower() == 'github.com' else None)
         seen = set()
         redirected = False
         for _ in range(6):
@@ -58,7 +102,22 @@ def resolve(url):
             seen.add(current)
             status, location = fetch(current)
             if status == 404:
+                if asset:
+                    try:
+                        replacement = asset_replacement(urlunsplit((original.scheme, original.netloc, original.path, '', '')), asset)
+                        if replacement:
+                            return replacement + ('#' + original.fragment if original.fragment else ''), False
+                    except (ValueError, OSError, http.client.HTTPException, UnicodeError):
+                        pass
                 return None, True
+            if status == 302 and asset and current == urlunsplit((original.scheme, original.netloc, original.path, '', '')) and location:
+                target = urljoin(current, location)
+                p = parts(target)
+                prefix = f'/{asset.group(1)}/{asset.group(2)}/releases/download/'
+                if p.netloc.lower() == 'github.com' and p.path.startswith(prefix) and p.path.endswith('/' + asset.group(3)) and not p.fragment:
+                    current = target
+                    continue
+                return None, False
             if status == 200:
                 return (current + ('#' + original.fragment if original.fragment else '') if redirected else None), False
             if status not in (301, 308) or not location:
@@ -92,16 +151,19 @@ def scan(root, fix=True, strict=False):
             continue
         def replace(match):
             token = match.group(0)
-            start = token.index('](https://') + 2
-            url = token[start:-1]
+            group = 'md' if match.group('md') else 'html'
+            start, end = match.span(group)
+            start -= match.start()
+            end -= match.start()
+            url = match.group(group)
             replacement, is_missing = resolve(url)
             name = path.relative_to(base).as_posix()
             if is_missing:
                 missing.append(f'{name}: {url}')
-            if replacement and replacement != url:
+            if replacement and replacement != url and not re.search(r'''[\s()<>"'\\&]''', replacement):
                 changes.append(name)
-                return token[:start] + replacement + ')'
-            return match.group(0)
+                return token[:start] + replacement + token[end:]
+            return token
         # ponytail: skip all backtick lines; a Markdown parser can recover inline links later.
         lines, fence = [], None
         for line in text.splitlines(keepends=True):
@@ -113,7 +175,7 @@ def scan(root, fix=True, strict=False):
             elif marker:
                 fence = marker.group(1)
                 lines.append(line)
-            elif '`' in line:
+            elif '`' in line or '\\' in line:
                 lines.append(line)
             else:
                 lines.append(LINK.sub(replace, line))
