@@ -24,7 +24,7 @@ linkbot --fix docs
 ```yaml
 repos:
   - repo: https://github.com/ruslanlap/linkbot
-    rev: v0.1.0
+    rev: v0.2.0
     hooks:
       - id: linkbot
 ```
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: links
-        uses: ruslanlap/linkbot@v0.1.0
+        uses: ruslanlap/linkbot@v0.2.0
         with:
           path: docs
 ```
@@ -55,7 +55,7 @@ jobs:
 
 Скопіюйте [`.github/workflows/linkbot.yml`](.github/workflows/linkbot.yml) у свій репозиторій за тим самим шляхом. Він запускається щотижня або вручну, викликає опублікований action з `fix: 'true'` та групує зміни в одному PR через `peter-evans/create-pull-request`. Код 1 дозволяє створити PR за наявності невиправлених 404; код 2 або відсутній статус блокує PR. Самі лише 404 не створюють PR; переглядайте журнал action. Перевіряйте виправлення перед злиттям. Workflow надає лише права contents і pull-requests на запис; налаштування репозиторію також мають дозволяти Actions створювати PR.
 
-Workflow посилається на `@main`: спочатку ці зміни треба злити й опублікувати. Після публікації зафіксуйте незмінний commit або реліз із `fix`; наведений вище приклад `v0.1.0` лише перевіряє посилання. Реальний PR не перевірено.
+Workflow використовує `v0.2.0`. Створення реального PR ще не перевірено.
 
 ## Межі
 

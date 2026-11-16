@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Fix links and report 404s
         id: scan
-        uses: ruslanlap/linkbot@main
+        uses: ruslanlap/linkbot@v0.2.0
         continue-on-error: true
         with:
           fix: 'true'

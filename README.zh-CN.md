@@ -24,7 +24,7 @@ linkbot --fix docs
 ```yaml
 repos:
   - repo: https://github.com/ruslanlap/linkbot
-    rev: v0.1.0
+    rev: v0.2.0
     hooks:
       - id: linkbot
 ```
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: links
-        uses: ruslanlap/linkbot@v0.1.0
+        uses: ruslanlap/linkbot@v0.2.0
         with:
           path: docs
 ```
@@ -55,7 +55,7 @@ jobs:
 
 将 [`.github/workflows/linkbot.yml`](.github/workflows/linkbot.yml) 复制到自己仓库的相同路径。它每周或手动运行，使用 `fix: 'true'` 调用已发布的 action，并通过 `peter-evans/create-pull-request` 将更改合并到一个 PR。退出码 1 允许在存在未修复 404 时提交修复；退出码 2 或缺少状态会阻止 PR。只有 404 时不会创建 PR；请查看 action 日志。合并前请审查所有修复。工作流仅授予 contents 和 pull-requests 写权限；仓库设置还必须允许 Actions 创建 PR。
 
-工作流引用 `@main`，因此必须先合并并发布这些更改。发布后请固定到包含 `fix` 的不可变提交或版本；上面的 `v0.1.0` 示例仅用于检查。尚未使用真实 PR 验证。
+工作流使用 `v0.2.0`。尚未使用真实 PR 验证。
 
 ## 限制
 
